@@ -5,13 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Muse 計測→グラフ化</title>
 <style>
+  html{-webkit-text-size-adjust:100%}
   body{font-family:sans-serif;margin:8px;background:#111;color:#eee}
   button,input{font-size:16px;padding:8px 12px;margin:2px}
   input[type=number]{width:70px;background:#222;color:#eee;border:1px solid #555}
-  canvas{width:100%;background:#000;display:block;margin:4px 0}
+  /* キャンバスの高さはCSSで固定（属性の書き換えで膨らむのを防ぐ） */
+  canvas{width:100%;background:#000;display:block;margin:4px 0;max-width:100%}
   h3{margin:12px 0 2px;font-size:15px;color:#9bd}
   #status{font-size:18px;color:#9c9;margin:6px 0}
-  #big{font-size:48px;text-align:center;color:#fd5}
+  #quality{font-size:12px;color:#9a9;margin:2px 0;word-break:break-all}
+  #big{font-size:48px;text-align:center;color:#fd5;min-height:56px}
   textarea{width:100%;height:50px;background:#222;color:#eee}
   #results{display:none}
 </style>
@@ -27,8 +30,9 @@
   <button id="btnCsv">CSVコピー</button>
 </div>
 <div id="status">未接続</div>
+<div id="quality"></div>
 <pre id="errlog" style="color:#f88;font-size:12px;white-space:pre-wrap;margin:2px 0"></pre>
-<pre id="diag"style="font-size:12px;line-height:1.4;background:#1a1a1a;padding:6px;margin:4px 0;overflow-x:auto;color:#cde">データ元: 未接続</pre>
+<pre id="diag" style="font-size:12px;line-height:1.4;background:#1a1a1a;padding:6px;margin:4px 0;overflow-x:auto;color:#cde;min-height:120px">データ元: 未接続</pre>
 <div id="big"></div>
 
 <div id="results">
@@ -37,31 +41,31 @@
     <option value="power">パワーの割合（計測全体で各帯域がどれだけ強かったか）</option>
     <option value="time">優位だった時間の割合（各時刻で一番強かった帯域の時間比）</option>
   </select>
-  <canvas id="pie" height="300"></canvas>
+  <canvas id="pie" data-h="300" style="height:300px"></canvas>
   <div id="pieText" style="font-size:16px;line-height:1.6;margin:4px 0"></div>
   <h3>帯域パワーの時間変化（横軸＝計測時間）</h3>
   <select id="bandMode" style="font-size:15px;padding:6px;background:#222;color:#eee">
     <option value="abs">絶対パワー(log)：各帯域の強さの推移</option>
     <option value="rel">相対パワー(%)：全体に占める割合の推移</option>
   </select>
-  <canvas id="bandTime" height="380"></canvas>
+  <canvas id="bandTime" data-h="380" style="height:380px"></canvas>
   <div style="font-size:13px;color:#aaa">下の2本の色帯＝その時刻に最も強かった帯域（上：全帯域 / 下：delta除外）</div>
   <div id="bandRuns" style="font-size:16px;line-height:1.6;margin:6px 0"></div>
   <h3>優位な周波数帯（相対パワー %）</h3>
   <div id="domText" style="font-size:18px;line-height:1.5;margin:4px 0"></div>
-  <canvas id="dom" height="220"></canvas>
+  <canvas id="dom" data-h="220" style="height:220px"></canvas>
   <h3>スペクトログラム（横:時間 / 縦:周波数 / 色:強さ）</h3>
   <select id="specMode" style="font-size:15px;padding:6px;background:#222;color:#eee">
     <option value="abs">絶対パワー(log)：優位な周波数がそのまま見える</option>
     <option value="norm">周波数ごとに正規化：時間変化を強調</option>
   </select>
-  <canvas id="spec" height="320"></canvas>
+  <canvas id="spec" data-h="320" style="height:320px"></canvas>
   <h3>全体波形（計測全区間）</h3>
-  <canvas id="overview" height="320"></canvas>
+  <canvas id="overview" data-h="320" style="height:320px"></canvas>
   <h3>周波数スペクトル（Welch法, 1〜44Hz）</h3>
-  <canvas id="psd" height="240"></canvas>
+  <canvas id="psd" data-h="240" style="height:240px"></canvas>
   <h3>バンドパワー（対数, 各チャンネル）</h3>
-  <canvas id="bands" height="200"></canvas>
+  <canvas id="bands" data-h="200" style="height:200px"></canvas>
   <textarea id="out" placeholder="CSV出力欄"></textarea>
 </div>
 
@@ -72,15 +76,25 @@ const COLORS = ['#f66','#6f6','#6af','#fd5'];
 const BANDS = [['delta',1,4],['theta',4,8],['alpha',8,13],['beta',13,30],['gamma',30,44]];
 const $ = id => document.getElementById(id);
 const setStatus = s => $('status').textContent = s;
+// 高解像度ディスプレイでもキャンバスが巨大化しないよう、倍率は最大2に制限
+const dpr = () => Math.min(window.devicePixelRatio || 1, 2);
 // 描画エラーを画面に表示（真っ黒のとき原因が分かるように）
 const errs = [];
 function showErr(msg) { errs.push(msg); $('errlog').textContent = '⚠ エラー:\n' + errs.join('\n'); }
 function safe(name, fn) { try { fn(); } catch (e) { showErr(name + ': ' + e.message); } }
 window.addEventListener('error', e => showErr(e.message));
+
+// キャンバスの準備: 表示高さは data-h（CSS固定）。属性heightは読まない＝再描画しても膨らまない
+function fit(c) {
+  const d = dpr(), h = +c.dataset.h || 300;
+  c.style.height = h + 'px';
+  c.width = Math.round(c.clientWidth * d);
+  c.height = Math.round(h * d);
+  return c.getContext('2d');
+}
 function emptyMsg(id, msg) {
-  const c = $(id), g = c.getContext ? (c.width = c.clientWidth * devicePixelRatio, c.height = c.getAttribute('height') * devicePixelRatio, c.getContext('2d')) : null;
-  if (!g) return;
-  g.fillStyle = '#f96'; g.font = `${14*devicePixelRatio}px sans-serif`; g.fillText(msg, 10, c.height / 2);
+  const c = $(id), g = fit(c), d = dpr();
+  g.fillStyle = '#f96'; g.font = `${14*d}px sans-serif`; g.fillText(msg, 10, c.height / 2);
 }
 
 let rec = NAMES.map(() => []);
@@ -214,7 +228,7 @@ $('btnStart').onclick = () => {
   if (!connected) { setStatus('先に接続（またはデモ）してください'); return; }
   const secs = Math.max(5, +$('secs').value || 30);
   rec = NAMES.map(() => []);
-  errs.length = 0; $('errlog').textContent = '';
+  errs.length = 0; $('errlog').textContent = ''; $('quality').textContent = '';
   recStartTime = Date.now();
   recording = true;
   $('results').style.display = 'none';
@@ -238,8 +252,8 @@ function finish() {
   data = rec.map(r => highpass(demean(r.slice(0, n)), 0.5));
   limits = data.map(artifactLimit);
   setStatus(`計測完了 [データ元: ${sourceLabel()}]: ${n}点 (${(n/FS).toFixed(1)}秒)`);
-    $('results').style.display = 'block';
-  renderAll();
+  $('results').style.display = 'block';
+  analyzeAndRender();
 }
 
 // ---------- 解析 ----------
@@ -285,7 +299,8 @@ function welchRun(x, limit) {
   for (let s = 0; s + N <= x.length; s += N / 2) {
     const seg = x.slice(s, s + N);
     tot++;
-    if (Math.max(...seg.map(Math.abs)) > limit) continue; // アーチファクト除外
+    let mxv = 0; for (let i = 0; i < seg.length; i++) { const a = Math.abs(seg[i]); if (a > mxv) mxv = a; }
+    if (mxv > limit) continue; // アーチファクト除外
     const m = seg.reduce((a,b)=>a+b,0) / N;
     const w = seg.map((v, n) => (v - m) * HANN[n]);
     for (let k = 1; k <= 44; k++) {
@@ -300,9 +315,9 @@ function welchRun(x, limit) {
 }
 
 // ---------- 描画 ----------
-function fit(c){ c.width = c.clientWidth * devicePixelRatio; c.height = c.getAttribute('height') * devicePixelRatio; return c.getContext('2d'); }
-const dpr = () => devicePixelRatio;
 function robustAmp(d) { const a = d.map(Math.abs).sort((x,y)=>x-y); return Math.max(20, a[Math.floor(a.length*0.98)] * 1.3); }
+function arrMax(a) { let m = -Infinity; for (let i = 0; i < a.length; i++) if (a[i] > m) m = a[i]; return m; }
+function arrMin(a) { let m = Infinity; for (let i = 0; i < a.length; i++) if (a[i] < m) m = a[i]; return m; }
 
 function drawWave(canvas, from, len) {
   const g = fit(canvas), W = canvas.width, H = canvas.height, rowH = H / 4;
@@ -311,7 +326,7 @@ function drawWave(canvas, from, len) {
     const seg = data[c].slice(from, from + len);
     const amp = robustAmp(data[c]);
     const y0 = rowH * (c + 0.5);
-    g.strokeStyle = '#333'; g.beginPath(); g.moveTo(0, y0); g.lineTo(W, y0); g.stroke();
+    g.strokeStyle = '#333'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, y0); g.lineTo(W, y0); g.stroke();
     g.strokeStyle = COLORS[c]; g.lineWidth = dpr(); g.beginPath();
     // 描画点数が画面幅の2倍を超えるときは区間ごとの最小/最大で間引く
     const step = Math.max(1, Math.floor(seg.length / (W / 2)));
@@ -321,8 +336,8 @@ function drawWave(canvas, from, len) {
       for (let i = 0; i < seg.length; i += step) {
         const sl = seg.slice(i, i + step);
         const x = W*i/seg.length;
-        g.moveTo(x, y0 - Math.max(-1,Math.min(1,Math.min(...sl)/amp))*rowH*0.45);
-        g.lineTo(x, y0 - Math.max(-1,Math.min(1,Math.max(...sl)/amp))*rowH*0.45);
+        g.moveTo(x, y0 - Math.max(-1,Math.min(1,arrMin(sl)/amp))*rowH*0.45);
+        g.lineTo(x, y0 - Math.max(-1,Math.min(1,arrMax(sl)/amp))*rowH*0.45);
       }
     }
     g.stroke();
@@ -424,7 +439,7 @@ function computeSpec(lim = limits) {
     const avg = new Float64Array(45); let cnt = 0;
     for (let c = 0; c < 4; c++) {
       const seg = data[c].slice(s, s + N);
-      if (Math.max(...seg.map(Math.abs)) > lim[c]) continue;   // アーチファクト窓は除外
+      if (arrMax(seg.map(Math.abs)) > lim[c]) continue;   // アーチファクト窓は除外
       const p = dftPower(seg);
       for (let k = 1; k <= 44; k++) avg[k] += p[k];
       cnt++;
@@ -444,6 +459,7 @@ function drawSpec() {
   const cw = (W - padL) / nw, ch = (H - padB) / 44;
   const mode = $('specMode').value;
   const valid = specData.filter(x => x);
+  if (!valid.length) { emptyMsg('spec', '解析できる区間がありません'); return; }
   let norm = (k, v) => 0;
   if (mode === 'abs') {
     const all = valid.flatMap(a => Array.from(a.slice(1))).sort((x,y)=>x-y);
@@ -475,10 +491,12 @@ function drawSpec() {
   g.fillText('0s', padL, H - 5*dpr());
   g.fillText((total + 1).toFixed(0) + 's', W - 34*dpr(), H - 5*dpr());
 }
-$('specMode').onchange = drawSpec;
+$('specMode').onchange = () => safe('スペクトログラム', drawSpec);
 
 // ---- 円グラフ（δ・θ・α・β の4帯域。γなど他は除外）----
 // 周波数分解能は1Hz刻みなので、各帯域は「その範囲に入る整数Hzのビン」を合計している
+const BAND_COLORS = ['#e33','#a5d','#1ad','#7b2','#f90'];
+const BAND_SYM = ['δ','θ','α','β','γ'];
 const PIE_BANDS = [
   ['δ波', 1, 3,  '3Hz以下',   '深いリラックス・無意識'],
   ['θ波', 4, 7,  '4〜7Hz',    'まどろみ'],
@@ -543,11 +561,9 @@ function drawPie() {
     `<br>最も多かったのは <b style="color:${BAND_COLORS[top]}">${PIE_BANDS[top][0]}（${pct[top].toFixed(1)}%）</b>` +
     `<br><span style="font-size:13px;color:#aaa">γ波など31Hz以上、および3〜4Hzなどの帯域の間は除外。4つの合計を100%としています。</span>`;
 }
-$('pieMode').onchange = drawPie;
+$('pieMode').onchange = () => safe('円グラフ', drawPie);
 
 // ---- 帯域パワーの時間変化（横軸＝計測時間）----
-const BAND_COLORS = ['#e33','#a5d','#1ad','#7b2','#f90'];
-const BAND_SYM = ['δ','θ','α','β','γ'];
 let bandSeries = null;
 function computeBandSeries() {
   const M = specData.length, P = BANDS.map(() => new Array(M).fill(null));
@@ -670,29 +686,54 @@ function drawBandTime() {
   const fmt = runs => runs.map(r => `<span style="color:${BAND_COLORS[r.b]}">${Math.round(r.start)}–${Math.round(r.end)}s: <b>${BANDS[r.b][0]}</b></span>`).join(' ／ ');
   $('bandRuns').innerHTML = `全帯域: ${fmt(dominantRuns(argA, T))}<br>delta除外: ${fmt(dominantRuns(argB, T))}`;
 }
-$('bandMode').onchange = drawBandTime;
+$('bandMode').onchange = () => safe('帯域パワー推移', drawBandTime);
 
-function renderAll() {
-    safe('全体波形', () => drawWave($('overview'), 0, data[0].length));
+// ---------- 解析（1回だけ）と描画（何度でも） ----------
+// 重い計算は計測完了時に1回だけ行い、リサイズ等では描画だけをやり直す
+function analyzeAndRender() {
+  drawWaveSafe();
   setTimeout(() => {
-    let spectra = null;
-    safe('スペクトル計算', () => { spectra = data.map((x, i) => welch(x, limits[i])); lastSpectra = spectra; });
-    if (!spectra) return;
+    lastSpectra = null; specData = null; bandSeries = null;
+    safe('スペクトル計算', () => { lastSpectra = data.map((x, i) => welch(x, limits[i])); });
+    if (!lastSpectra) return;
     safe('スペクトログラム計算', () => computeSpec());
-    safe('円グラフ', drawPie);
-    safe('帯域パワー推移', () => { computeBandSeries(); drawBandTime(); });
-    safe('優位な帯域', () => drawDominance(spectra));
-    safe('スペクトログラム', drawSpec);
-    safe('周波数スペクトル', () => drawPSD(spectra));
-    safe('バンドパワー', () => drawBands(spectra));
-    // データ品質の表示
-    const used = spectra.map(s => `${s.cnt}/${s.tot}`).join(', ');
-    const relaxed = spectra.some(s => s.relaxed) ? ' ⚠全窓が大振幅だったため除外なしで計算' : '';
+    safe('帯域パワー計算', () => computeBandSeries());
+    drawAll();
+    // データ品質は専用欄に「上書き」表示（ステータスへ追記しない）
+    const used = lastSpectra.map(s => `${s.cnt}/${s.tot}`).join(', ');
+    const relaxed = lastSpectra.some(s => s.relaxed) ? ' ⚠全窓が大振幅だったため除外なしで計算' : '';
     const amp = data.map(d => { const a = d.map(Math.abs).sort((x, y) => x - y); return a[Math.floor(a.length * 0.98)].toFixed(0); }).join('/');
-    setStatus($('status').textContent + ` ／ 使用窓(各ch): ${used}${relaxed} ／ 振幅98%点(µV): ${amp}`);
+    $('quality').textContent = `使用窓(各ch): ${used}${relaxed} ／ 振幅98%点(µV): ${amp}`;
+    lastW = $('results').clientWidth;
   }, 30);
 }
-window.addEventListener('resize', () => { if (data) renderAll(); });
+function drawWaveSafe() { safe('全体波形', () => drawWave($('overview'), 0, data[0].length)); }
+function drawAll() {
+  if (!data) return;
+  drawWaveSafe();
+  if (!lastSpectra || !specData) return;
+  safe('円グラフ', drawPie);
+  safe('帯域パワー推移', drawBandTime);
+  safe('優位な帯域', () => drawDominance(lastSpectra));
+  safe('スペクトログラム', drawSpec);
+  safe('周波数スペクトル', () => drawPSD(lastSpectra));
+  safe('バンドパワー', () => drawBands(lastSpectra));
+}
+
+// ---------- リサイズ対策 ----------
+// タブレットはスクロールでアドレスバーが出入りするたびに resize が発火する。
+// 「横幅が実際に変わったとき」だけ、少し待ってから描画だけやり直す。
+let lastW = 0, resizeTimer = null;
+window.addEventListener('resize', () => {
+  if (!data) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const w = $('results').clientWidth;
+    if (w === lastW || w === 0) return;
+    lastW = w;
+    drawAll();
+  }, 300);
+});
 
 // ---------- CSV ----------
 $('btnCsv').onclick = async () => {
