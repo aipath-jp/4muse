@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Muse Visual</title>
+<title>Muse 計測→グラフ化</title>
 <style>
   html{-webkit-text-size-adjust:100%}
   body{font-family:sans-serif;margin:8px;background:#111;color:#eee}
@@ -12,10 +12,13 @@
   /* キャンバスの高さはCSSで固定（属性の書き換えで膨らむのを防ぐ） */
   canvas{width:100%;background:#000;display:block;margin:4px 0;max-width:100%}
   h3{margin:12px 0 2px;font-size:15px;color:#9bd}
+  h2{margin:22px 0 4px;font-size:17px;color:#fc6;border-bottom:1px solid #543;padding-bottom:2px}
+  .note{font-size:13px;color:#aaa;line-height:1.5;margin:2px 0}
   #status{font-size:18px;color:#9c9;margin:6px 0}
-  #quality{font-size:12px;color:#9a9;margin:2px 0;word-break:break-all}
+  .q{font-size:12px;color:#9a9;margin:2px 0;word-break:break-all}
   #big{font-size:48px;text-align:center;color:#fd5;min-height:56px}
   textarea{width:100%;height:50px;background:#222;color:#eee}
+  select{font-size:15px;padding:6px;background:#222;color:#eee}
   #results{display:none}
 </style>
 </head>
@@ -30,32 +33,60 @@
   <button id="btnCsv">CSVコピー</button>
 </div>
 <div id="status">未接続</div>
-<div id="quality"></div>
+<div id="quality" class="q"></div>
+<div id="quality2" class="q"></div>
 <pre id="errlog" style="color:#f88;font-size:12px;white-space:pre-wrap;margin:2px 0"></pre>
 <pre id="diag" style="font-size:12px;line-height:1.4;background:#1a1a1a;padding:6px;margin:4px 0;overflow-x:auto;color:#cde;min-height:120px">データ元: 未接続</pre>
 <div id="big"></div>
 
 <div id="results">
-  <h3>計測時間全体での割合（円グラフ：δ・θ・α・β の4つで100%）</h3>
-  <select id="pieMode" style="font-size:15px;padding:6px;background:#222;color:#eee">
+
+  <h2>【従来版】帯域パワーの単純合計</h2>
+  <h3>円グラフ（δ・θ・α・β の4つで100%）</h3>
+  <select id="pieMode">
     <option value="power">パワーの割合（計測全体で各帯域がどれだけ強かったか）</option>
     <option value="time">優位だった時間の割合（各時刻で一番強かった帯域の時間比）</option>
   </select>
   <canvas id="pie" data-h="300" style="height:300px"></canvas>
   <div id="pieText" style="font-size:16px;line-height:1.6;margin:4px 0"></div>
   <h3>帯域パワーの時間変化（横軸＝計測時間）</h3>
-  <select id="bandMode" style="font-size:15px;padding:6px;background:#222;color:#eee">
+  <select id="bandMode">
     <option value="abs">絶対パワー(log)：各帯域の強さの推移</option>
     <option value="rel">相対パワー(%)：全体に占める割合の推移</option>
   </select>
   <canvas id="bandTime" data-h="380" style="height:380px"></canvas>
-  <div style="font-size:13px;color:#aaa">下の2本の色帯＝その時刻に最も強かった帯域（上：全帯域 / 下：delta除外）</div>
+  <div class="note">下の2本の色帯＝その時刻に最も強かった帯域（上：全帯域 / 下：delta除外）</div>
   <div id="bandRuns" style="font-size:16px;line-height:1.6;margin:6px 0"></div>
+
+  <h2>【補正版】1/f背景を除いた「山」だけで評価</h2>
+  <div class="note">
+    補正の内容：①チャンネルごとに計算し中央値で統合 ②振幅150µV超の窓を固定しきい値で除外（自動で緩めない）
+    ③筋電が多い窓（30〜44Hzが4〜44Hzの10%超）を除外 ④スペクトルの右下がりの背景（1/f）を直線で推定して差し引き、
+    背景を超えた「山」の高さだけを帯域ごとの1Hzあたり平均で比較。<br>
+    ※δは背景推定にも使われるため、補正版では小さく出るのが正常です。しきい値は経験的な値で、正解データによる検証はありません。
+  </div>
+  <h3>円グラフ（補正版）</h3>
+  <select id="pieMode2">
+    <option value="power">山の高さの割合（背景を超えた分の帯域別平均）</option>
+    <option value="time">優位だった時間の割合（各時刻で山が最も高い帯域の時間比）</option>
+  </select>
+  <canvas id="pie2" data-h="300" style="height:300px"></canvas>
+  <div id="pieText2" style="font-size:16px;line-height:1.6;margin:4px 0"></div>
+  <h3>帯域の「山の高さ」の時間変化（補正版）</h3>
+  <select id="bandMode2">
+    <option value="abs">背景比：背景の何倍上に山があるか（0＝山なし）</option>
+    <option value="rel">相対(%)：山の高さの占める割合の推移</option>
+  </select>
+  <canvas id="bandTime2" data-h="360" style="height:360px"></canvas>
+  <div class="note">下の色帯＝その時刻に山が最も高かった帯域</div>
+  <div id="bandRuns2" style="font-size:16px;line-height:1.6;margin:6px 0"></div>
+
+  <h2>共通</h2>
   <h3>優位な周波数帯（相対パワー %）</h3>
   <div id="domText" style="font-size:18px;line-height:1.5;margin:4px 0"></div>
   <canvas id="dom" data-h="220" style="height:220px"></canvas>
   <h3>スペクトログラム（横:時間 / 縦:周波数 / 色:強さ）</h3>
-  <select id="specMode" style="font-size:15px;padding:6px;background:#222;color:#eee">
+  <select id="specMode">
     <option value="abs">絶対パワー(log)：優位な周波数がそのまま見える</option>
     <option value="norm">周波数ごとに正規化：時間変化を強調</option>
   </select>
@@ -228,7 +259,7 @@ $('btnStart').onclick = () => {
   if (!connected) { setStatus('先に接続（またはデモ）してください'); return; }
   const secs = Math.max(5, +$('secs').value || 30);
   rec = NAMES.map(() => []);
-  errs.length = 0; $('errlog').textContent = ''; $('quality').textContent = '';
+  errs.length = 0; $('errlog').textContent = ''; $('quality').textContent = ''; $('quality2').textContent = '';
   recStartTime = Date.now();
   recording = true;
   $('results').style.display = 'none';
@@ -273,7 +304,7 @@ function highpass(x, fc) {
   };
   return run(run(x).reverse()).reverse();
 }
-// アーチファクト除外の閾値: 通常は150µV。ただし全体に振幅が大きい信号では、窓ごとの最大振幅の中央値×2.5まで広げる
+// 【従来版】アーチファクト除外の閾値: 通常は150µV。ただし全体に振幅が大きい信号では、窓ごとの最大振幅の中央値×2.5まで広げる
 let limits = [150, 150, 150, 150];
 function artifactLimit(x) {
   const peaks = [];
@@ -288,6 +319,10 @@ const COS = [], SIN = [], HANN = [];
 for (let k = 0; k <= 44; k++) { COS[k] = new Float64Array(N); SIN[k] = new Float64Array(N); for (let n = 0; n < N; n++) { const a = 2*Math.PI*k*n/N; COS[k][n] = Math.cos(a); SIN[k][n] = Math.sin(a); } }
 for (let n = 0; n < N; n++) HANN[n] = 0.5 - 0.5*Math.cos(2*Math.PI*n/(N-1));
 
+function arrMax(a) { let m = -Infinity; for (let i = 0; i < a.length; i++) if (a[i] > m) m = a[i]; return m; }
+function arrMin(a) { let m = Infinity; for (let i = 0; i < a.length; i++) if (a[i] < m) m = a[i]; return m; }
+function absMax(a) { let m = 0; for (let i = 0; i < a.length; i++) { const v = Math.abs(a[i]); if (v > m) m = v; } return m; }
+
 // Welch: 1秒窓・50%重なり → 1Hz刻み 0..44Hz。振幅の大きすぎる窓(まばたき等)は除外
 function welch(x, limit = 150) {
   let r = welchRun(x, limit);
@@ -299,8 +334,7 @@ function welchRun(x, limit) {
   for (let s = 0; s + N <= x.length; s += N / 2) {
     const seg = x.slice(s, s + N);
     tot++;
-    let mxv = 0; for (let i = 0; i < seg.length; i++) { const a = Math.abs(seg[i]); if (a > mxv) mxv = a; }
-    if (mxv > limit) continue; // アーチファクト除外
+    if (absMax(seg) > limit) continue; // アーチファクト除外
     const m = seg.reduce((a,b)=>a+b,0) / N;
     const w = seg.map((v, n) => (v - m) * HANN[n]);
     for (let k = 1; k <= 44; k++) {
@@ -316,8 +350,6 @@ function welchRun(x, limit) {
 
 // ---------- 描画 ----------
 function robustAmp(d) { const a = d.map(Math.abs).sort((x,y)=>x-y); return Math.max(20, a[Math.floor(a.length*0.98)] * 1.3); }
-function arrMax(a) { let m = -Infinity; for (let i = 0; i < a.length; i++) if (a[i] > m) m = a[i]; return m; }
-function arrMin(a) { let m = Infinity; for (let i = 0; i < a.length; i++) if (a[i] < m) m = a[i]; return m; }
 
 function drawWave(canvas, from, len) {
   const g = fit(canvas), W = canvas.width, H = canvas.height, rowH = H / 4;
@@ -439,7 +471,7 @@ function computeSpec(lim = limits) {
     const avg = new Float64Array(45); let cnt = 0;
     for (let c = 0; c < 4; c++) {
       const seg = data[c].slice(s, s + N);
-      if (arrMax(seg.map(Math.abs)) > lim[c]) continue;   // アーチファクト窓は除外
+      if (absMax(seg) > lim[c]) continue;   // アーチファクト窓は除外
       const p = dftPower(seg);
       for (let k = 1; k <= 44; k++) avg[k] += p[k];
       cnt++;
@@ -493,41 +525,21 @@ function drawSpec() {
 }
 $('specMode').onchange = () => safe('スペクトログラム', drawSpec);
 
-// ---- 円グラフ（δ・θ・α・β の4帯域。γなど他は除外）----
-// 周波数分解能は1Hz刻みなので、各帯域は「その範囲に入る整数Hzのビン」を合計している
+// ---------- 円グラフ（共通描画）----------
 const BAND_COLORS = ['#e33','#a5d','#1ad','#7b2','#f90'];
 const BAND_SYM = ['δ','θ','α','β','γ'];
+// 周波数分解能は1Hz刻みなので、各帯域は「その範囲に入る整数Hzのビン」を合計している
 const PIE_BANDS = [
   ['δ波', 1, 3,  '3Hz以下',   '深いリラックス・無意識'],
   ['θ波', 4, 7,  '4〜7Hz',    'まどろみ'],
   ['α波', 8, 12, '8〜12Hz',   'リラックス'],
   ['β波', 13, 30, '13〜30Hz', '集中・緊張'],
 ];
-let lastSpectra = null;
-function pieValues() {
-  if ($('pieMode').value === 'time') {
-    const cnt = [0, 0, 0, 0]; let n = 0;
-    specData.forEach(a => {
-      if (!a) return;
-      let best = 0, bv = -1;
-      PIE_BANDS.forEach(([, lo, hi], b) => { let s = 0; for (let k = lo; k <= hi; k++) s += Math.pow(10, a[k]); if (s > bv) { bv = s; best = b; } });
-      cnt[best]++; n++;
-    });
-    return { vals: cnt, total: n };
-  }
-  const vals = PIE_BANDS.map(([, lo, hi]) => {
-    let s = 0;
-    lastSpectra.forEach(({p}) => { for (let k = lo; k <= hi; k++) s += p[k]; });
-    return s / lastSpectra.length;
-  });
-  return { vals, total: vals.reduce((a, b) => a + b, 0) };
-}
-function drawPie() {
-  if (!lastSpectra || !specData) return;
-  const { vals, total } = pieValues();
-  if (!(total > 0)) { emptyMsg('pie', '解析できる区間がありません（データが不安定すぎる可能性）'); return; }
+// vals: 4帯域の値, total: 合計, whatLabel: 「パワー」など, extra: 末尾に出す注意書き(HTML)
+function drawPieCanvas(canvasId, textId, vals, total, whatLabel, extra) {
+  if (!(total > 0)) { emptyMsg(canvasId, '解析できる区間がありません（データが不安定すぎる／山が検出されない）'); $(textId).innerHTML = extra || ''; return; }
   const pct = vals.map(v => v / total * 100);
-  const c = $('pie'), g = fit(c), W = c.width, H = c.height, d = dpr();
+  const c = $(canvasId), g = fit(c), W = c.width, H = c.height, d = dpr();
   const legendW = 175 * d;
   const r = Math.max(50*d, Math.min(H * 0.42, (W - legendW - 30*d) / 2));
   const cx = 15*d + r, cy = H / 2;
@@ -555,47 +567,94 @@ function drawPie() {
     g.fillText(range, lx + 20*d, y + 28*d); g.fillText(desc, lx + 20*d, y + 42*d);
   });
   const secs = (data[0].length / FS).toFixed(0), top = pct.indexOf(Math.max(...pct));
-  const what = $('pieMode').value === 'time' ? '優位だった時間' : 'パワー';
-  $('pieText').innerHTML = `計測${secs}秒間の${what}の割合: ` +
+  $(textId).innerHTML = `計測${secs}秒間の${whatLabel}の割合: ` +
     PIE_BANDS.map(([name], b) => `<span style="color:${BAND_COLORS[b]}">${name} <b>${pct[b].toFixed(1)}%</b></span>`).join(' ／ ') +
     `<br>最も多かったのは <b style="color:${BAND_COLORS[top]}">${PIE_BANDS[top][0]}（${pct[top].toFixed(1)}%）</b>` +
-    `<br><span style="font-size:13px;color:#aaa">γ波など31Hz以上、および3〜4Hzなどの帯域の間は除外。4つの合計を100%としています。</span>`;
+    `<br><span style="font-size:13px;color:#aaa">γ波など31Hz以上、および3〜4Hzなどの帯域の間は除外。4つの合計を100%としています。</span>` + (extra || '');
+}
+
+// ---- 【従来版】円グラフ ----
+let lastSpectra = null;
+function pieValues() {
+  if ($('pieMode').value === 'time') {
+    const cnt = [0, 0, 0, 0]; let n = 0;
+    specData.forEach(a => {
+      if (!a) return;
+      let best = 0, bv = -1;
+      PIE_BANDS.forEach(([, lo, hi], b) => { let s = 0; for (let k = lo; k <= hi; k++) s += Math.pow(10, a[k]); if (s > bv) { bv = s; best = b; } });
+      cnt[best]++; n++;
+    });
+    return { vals: cnt, total: n };
+  }
+  const vals = PIE_BANDS.map(([, lo, hi]) => {
+    let s = 0;
+    lastSpectra.forEach(({p}) => { for (let k = lo; k <= hi; k++) s += p[k]; });
+    return s / lastSpectra.length;
+  });
+  return { vals, total: vals.reduce((a, b) => a + b, 0) };
+}
+function drawPie() {
+  if (!lastSpectra || !specData) return;
+  const { vals, total } = pieValues();
+  drawPieCanvas('pie', 'pieText', vals, total, $('pieMode').value === 'time' ? '優位だった時間' : 'パワー', '');
 }
 $('pieMode').onchange = () => safe('円グラフ', drawPie);
 
-// ---- 帯域パワーの時間変化（横軸＝計測時間）----
-let bandSeries = null;
-function computeBandSeries() {
-  const M = specData.length, P = BANDS.map(() => new Array(M).fill(null));
-  specData.forEach((a, i) => {
-    if (!a) return;
-    BANDS.forEach(([,lo,hi], b) => { let s = 0; for (let k = lo; k < hi; k++) s += Math.pow(10, a[k]); P[b][i] = s; });
-  });
-  if (P[0].every(v => v === null)) { bandSeries = null; return; }
-  for (const arr of P) {                       // 除外した窓は前後から線形補間
-    let last = -1;
-    for (let i = 0; i < M; i++) {
-      if (arr[i] === null) continue;
-      if (last >= 0) for (let j = last + 1; j < i; j++) arr[j] = arr[last] + (arr[i] - arr[last]) * (j - last) / (i - last);
-      last = i;
-    }
-    const first = arr.findIndex(v => v !== null);
-    for (let j = 0; j < first; j++) arr[j] = arr[first];
-    for (let j = last + 1; j < M; j++) arr[j] = arr[last];
+// ---------- 時間変化グラフ（共通描画）----------
+// o: { canvasId, series[5][M](描画する値), lo, hi, fmtY, hop, M, T, strips:[[arg[], label]], runsEl, runsHtmlFn }
+function drawTimeChart(o) {
+  const c = $(o.canvasId), g = fit(c), W = c.width, H = c.height, d = dpr();
+  const padL = 54*d, padR = 36*d, padT = 10*d, stripH = 18*d, axisH = 22*d, ns = o.strips.length;
+  const chartH = H - padT - axisH - stripH*ns - 14*d;
+  const T = o.T, M = o.M, plotW = W - padL - padR, series = o.series, lo = o.lo, hi = o.hi;
+  const xT = t => padL + plotW * t / T;
+  const xI = i => xT((i * o.hop + N / 2) / FS);
+  const yOf = v => padT + chartH * (1 - (v - lo) / (hi - lo + 1e-9));
+  g.font = `${11*d}px sans-serif`;
+  for (let q = 0; q <= 4; q++) {     // 横線(目盛り)
+    const v = lo + (hi - lo) * q / 4, y = yOf(v);
+    g.strokeStyle = '#2a2a2a'; g.lineWidth = d; g.beginPath(); g.moveTo(padL, y); g.lineTo(W - padR, y); g.stroke();
+    g.fillStyle = '#888'; g.fillText(o.fmtY(v), 4, y + 4*d);
   }
-  const L = P.map(arr => arr.map(v => Math.log10(v + 1e-9)));
-  const sm = L.map(arr => arr.map((_, i) => {   // 前後2点の移動平均(約1.25秒)
-    let s = 0, n = 0;
-    for (let j = Math.max(0, i - 2); j <= Math.min(M - 1, i + 2); j++) { s += arr[j]; n++; }
-    return s / n;
-  }));
-  bandSeries = { M, hop: 64, L: sm };
+  const step = T <= 40 ? 5 : (T <= 120 ? 10 : 30);   // 縦線(時間目盛り)
+  for (let t = 0; t <= T + 0.01; t += step) {
+    const x = xT(t);
+    g.strokeStyle = '#2a2a2a'; g.beginPath(); g.moveTo(x, padT); g.lineTo(x, padT + chartH); g.stroke();
+    g.fillStyle = '#aaa'; g.fillText(t + 's', Math.min(x, W - padR - 20*d) - 6*d, H - 5*d);
+  }
+  g.lineJoin = 'round'; g.lineWidth = 2.5 * d;   // 各帯域の線
+  series.forEach((arr, b) => {
+    g.strokeStyle = BAND_COLORS[b]; g.beginPath();
+    arr.forEach((v, i) => i ? g.lineTo(xI(i), yOf(v)) : g.moveTo(xI(i), yOf(v)));
+    g.stroke();
+  });
+  // 右端のギリシャ文字(重なりを避けて配置)
+  const ly = series.map(a => yOf(a[M - 1]));
+  const pos = [], order = [0,1,2,3,4].sort((a, b) => ly[a] - ly[b]);
+  let prev = -1e9;
+  order.forEach(b => { const y = Math.max(ly[b], prev + 18*d); pos[b] = y; prev = y; });
+  g.font = `bold ${18*d}px sans-serif`;
+  series.forEach((_, b) => { g.fillStyle = BAND_COLORS[b]; g.fillText(BAND_SYM[b], W - padR + 8*d, pos[b] + 6*d); });
+  // 優位な帯域の色帯
+  const cellW = plotW * (o.hop / FS) / T;
+  o.strips.forEach(([arg, label], r) => {
+    const y = padT + chartH + 14*d + r * stripH;
+    arg.forEach((b, i) => {
+      const x0 = i === 0 ? padL : xI(i) - cellW / 2;
+      const x1 = i === M - 1 ? W - padR : xI(i) + cellW / 2;
+      g.fillStyle = BAND_COLORS[b]; g.fillRect(x0, y, x1 - x0 + 1, stripH - 3*d);
+    });
+    g.font = `${10*d}px sans-serif`; g.fillStyle = '#aaa'; g.fillText(label, 4, y + 12*d);
+  });
+  // 文字での要約
+  const fmt = runs => runs.map(r => `<span style="color:${BAND_COLORS[r.b]}">${Math.round(r.start)}–${Math.round(r.end)}s: <b>${BANDS[r.b][0]}</b></span>`).join(' ／ ');
+  $(o.runsEl).innerHTML = o.strips.map(([arg, label]) => `${label}: ${fmt(dominantRuns(arg, T, o.hop))}`).join('<br>');
 }
 
-function dominantRuns(arg, T) {
-  const hopS = bandSeries.hop / FS, last = arg.length - 1, runs = [];
+function dominantRuns(arg, T, hop) {
+  const hopS = hop / FS, last = arg.length - 1, runs = [];
   arg.forEach((b, i) => {
-    const tc = (i * bandSeries.hop + N / 2) / FS;
+    const tc = (i * hop + N / 2) / FS;
     const st = i === 0 ? 0 : tc - hopS / 2, en = i === last ? T : tc + hopS / 2;
     if (runs.length && runs[runs.length - 1].b === b) runs[runs.length - 1].end = en;
     else runs.push({ b, start: st, end: en });
@@ -616,94 +675,179 @@ function dominantRuns(arg, T) {
   }
   return runs;
 }
+function argmaxCols(arr5, M, from) {   // 各時刻で最大の帯域番号（from以上の帯域のみ対象）
+  const out = [];
+  for (let i = 0; i < M; i++) { let a = from; for (let k = from + 1; k < 5; k++) if (arr5[k][i] > arr5[a][i]) a = k; out.push(a); }
+  return out;
+}
+function interpNulls(arr) {   // null(除外した窓)を前後から線形補間。全部nullならfalse
+  const M = arr.length; let last = -1;
+  if (arr.every(v => v === null)) return false;
+  for (let i = 0; i < M; i++) {
+    if (arr[i] === null) continue;
+    if (last >= 0) for (let j = last + 1; j < i; j++) arr[j] = arr[last] + (arr[i] - arr[last]) * (j - last) / (i - last);
+    last = i;
+  }
+  const first = arr.findIndex(v => v !== null);
+  for (let j = 0; j < first; j++) arr[j] = arr[first];
+  for (let j = last + 1; j < M; j++) arr[j] = arr[last];
+  return true;
+}
+function movAvg(arr, r) {   // 前後r点の移動平均
+  const M = arr.length;
+  return arr.map((_, i) => { let s = 0, n = 0; for (let j = Math.max(0, i - r); j <= Math.min(M - 1, i + r); j++) { s += arr[j]; n++; } return s / n; });
+}
 
+// ---- 【従来版】帯域パワーの時間変化 ----
+let bandSeries = null;
+function computeBandSeries() {
+  const M = specData.length, P = BANDS.map(() => new Array(M).fill(null));
+  specData.forEach((a, i) => {
+    if (!a) return;
+    BANDS.forEach(([,lo,hi], b) => { let s = 0; for (let k = lo; k < hi; k++) s += Math.pow(10, a[k]); P[b][i] = s; });
+  });
+  if (P[0].every(v => v === null)) { bandSeries = null; return; }
+  for (const arr of P) interpNulls(arr);
+  const L = P.map(arr => arr.map(v => Math.log10(v + 1e-9)));
+  bandSeries = { M, hop: 64, L: L.map(a => movAvg(a, 2)) };
+}
 function drawBandTime() {
   if (!bandSeries) { emptyMsg('bandTime', '解析できる区間がありません（データが不安定すぎる可能性）'); return; }
-  const c = $('bandTime'), g = fit(c), W = c.width, H = c.height, d = dpr();
-  const padL = 54*d, padR = 36*d, padT = 10*d, stripH = 18*d, axisH = 22*d;
-  const chartH = H - padT - axisH - stripH*2 - 14*d;
-  const T = data[0].length / FS, M = bandSeries.M, plotW = W - padL - padR;
-  const xT = t => padL + plotW * t / T;
-  const xI = i => xT((i * bandSeries.hop + N / 2) / FS);
-  const mode = $('bandMode').value;
-  let series, lo, hi;
-  if (mode === 'rel') {
+  const M = bandSeries.M, T = data[0].length / FS;
+  let series, lo, hi, fmtY;
+  if ($('bandMode').value === 'rel') {
     const lin = bandSeries.L.map(a => a.map(v => Math.pow(10, v)));
     const tot = Array.from({ length: M }, (_, i) => lin.reduce((s, a) => s + a[i], 0));
     series = lin.map(a => a.map((v, i) => v / tot[i] * 100));
-    lo = 0; hi = Math.max(10, ...series.flat()) * 1.05;
+    lo = 0; hi = Math.max(10, ...series.flat()) * 1.05; fmtY = v => v.toFixed(0) + '%';
   } else {
     series = bandSeries.L;
-    const all = series.flat(); lo = Math.min(...all) - 0.1; hi = Math.max(...all) + 0.1;
+    const all = series.flat(); lo = Math.min(...all) - 0.1; hi = Math.max(...all) + 0.1; fmtY = v => v.toFixed(1);
   }
-  const yOf = v => padT + chartH * (1 - (v - lo) / (hi - lo + 1e-9));
-  g.font = `${11*d}px sans-serif`;
-  // 横線(目盛り)
-  for (let q = 0; q <= 4; q++) {
-    const v = lo + (hi - lo) * q / 4, y = yOf(v);
-    g.strokeStyle = '#2a2a2a'; g.lineWidth = d; g.beginPath(); g.moveTo(padL, y); g.lineTo(W - padR, y); g.stroke();
-    g.fillStyle = '#888'; g.fillText(mode === 'rel' ? v.toFixed(0) + '%' : v.toFixed(1), 4, y + 4*d);
-  }
-  // 縦線(時間目盛り)
-  const step = T <= 40 ? 5 : (T <= 120 ? 10 : 30);
-  for (let t = 0; t <= T + 0.01; t += step) {
-    const x = xT(t);
-    g.strokeStyle = '#2a2a2a'; g.beginPath(); g.moveTo(x, padT); g.lineTo(x, padT + chartH); g.stroke();
-    g.fillStyle = '#aaa'; g.fillText(t + 's', Math.min(x, W - padR - 20*d) - 6*d, H - 5*d);
-  }
-  // 各帯域の線
-  g.lineJoin = 'round'; g.lineWidth = 2.5 * d;
-  series.forEach((arr, b) => {
-    g.strokeStyle = BAND_COLORS[b]; g.beginPath();
-    arr.forEach((v, i) => i ? g.lineTo(xI(i), yOf(v)) : g.moveTo(xI(i), yOf(v)));
-    g.stroke();
-  });
-  // 右端のギリシャ文字(重なりを避けて配置)
-  const ly = series.map(a => yOf(a[M - 1]));
-  const pos = [], order = [0,1,2,3,4].sort((a, b) => ly[a] - ly[b]);
-  let prev = -1e9;
-  order.forEach(b => { const y = Math.max(ly[b], prev + 18*d); pos[b] = y; prev = y; });
-  g.font = `bold ${18*d}px sans-serif`;
-  series.forEach((_, b) => { g.fillStyle = BAND_COLORS[b]; g.fillText(BAND_SYM[b], W - padR + 8*d, pos[b] + 6*d); });
-  // 優位な帯域の色帯(上:全帯域 / 下:delta除外)
-  const argA = [], argB = [];
-  for (let i = 0; i < M; i++) {
-    let a = 0, b = 1;
-    for (let k = 1; k < 5; k++) { if (bandSeries.L[k][i] > bandSeries.L[a][i]) a = k; if (k > 1 && bandSeries.L[k][i] > bandSeries.L[b][i]) b = k; }
-    argA.push(a); argB.push(b);
-  }
-  const cellW = plotW * (bandSeries.hop / FS) / T;
-  [[argA, '全帯域'], [argB, 'δ除外']].forEach(([arg, label], r) => {
-    const y = padT + chartH + 14*d + r * stripH;
-    arg.forEach((b, i) => {
-      const x0 = i === 0 ? padL : xI(i) - cellW / 2;
-      const x1 = i === M - 1 ? W - padR : xI(i) + cellW / 2;
-      g.fillStyle = BAND_COLORS[b]; g.fillRect(x0, y, x1 - x0 + 1, stripH - 3*d);
-    });
-    g.font = `${10*d}px sans-serif`; g.fillStyle = '#aaa'; g.fillText(label, 4, y + 12*d);
-  });
-  // 文字での要約
-  const fmt = runs => runs.map(r => `<span style="color:${BAND_COLORS[r.b]}">${Math.round(r.start)}–${Math.round(r.end)}s: <b>${BANDS[r.b][0]}</b></span>`).join(' ／ ');
-  $('bandRuns').innerHTML = `全帯域: ${fmt(dominantRuns(argA, T))}<br>delta除外: ${fmt(dominantRuns(argB, T))}`;
+  drawTimeChart({ canvasId: 'bandTime', series, lo, hi, fmtY, hop: bandSeries.hop, M, T,
+    strips: [[argmaxCols(bandSeries.L, M, 0), '全帯域'], [argmaxCols(bandSeries.L, M, 1), 'δ除外']], runsEl: 'bandRuns' });
 }
 $('bandMode').onchange = () => safe('帯域パワー推移', drawBandTime);
+
+// =====================================================================
+// 【補正版】
+//  - チャンネルごとに窓を評価（振幅150µV超は固定しきい値で除外、筋電窓も除外）
+//  - 各窓・各チャンネルで 1/f 背景を直線フィット（7〜14Hzは山を避けて除外、外れ値は1回再フィット）
+//  - 背景を超えた分 max(0, p/背景 − 1) を「山の高さ」とし、チャンネル間は中央値で統合
+//  - 帯域値＝帯域内ビンの平均（帯域幅の違いを吸収）
+// =====================================================================
+const ART_LIMIT = 150;     // µV（固定）
+const EMG_FRAC  = 0.10;    // 30〜44Hz / 4〜44Hz がこれを超える窓は筋電とみなして除外（経験的）
+let corrected = null;
+
+function regress(pts) {
+  let n = pts.length, sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (const [x, y] of pts) { sx += x; sy += y; sxx += x*x; sxy += x*y; }
+  const den = n*sxx - sx*sx || 1e-12, b = (n*sxy - sx*sy) / den;
+  return [(sy - b*sx) / n, b];
+}
+function bgFit(p) {
+  const pts = [];
+  for (let k = 1; k <= 44; k++) { if (k >= 7 && k <= 14) continue; pts.push([Math.log10(k), Math.log10(p[k] + 1e-12)]); }
+  let [a, b] = regress(pts);
+  for (let pass = 0; pass < 1; pass++) {
+    const keep = pts.filter(([x, y]) => y - (a + b*x) <= 0.15);   // 上に突き出た点(山)を除いて再フィット
+    if (keep.length < 8) break;
+    [a, b] = regress(keep);
+  }
+  return k => Math.pow(10, a + b * Math.log10(k));
+}
+function median(v) { const s = v.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2; }
+const meanBins = (e, lo, hiIncl) => { let s = 0; for (let k = lo; k <= hiIncl; k++) s += e[k]; return s / (hiIncl - lo + 1); };
+
+function computeCorrected() {
+  const hop = 64, n = data[0].length, win = [];
+  const art = [0,0,0,0], emg = [0,0,0,0], used = [0,0,0,0]; let total = 0;
+  for (let s = 0; s + N <= n; s += hop) {
+    total++;
+    const es = [];
+    for (let c = 0; c < 4; c++) {
+      const seg = data[c].slice(s, s + N);
+      if (absMax(seg) > ART_LIMIT) { art[c]++; continue; }
+      const p = dftPower(seg);
+      let hf = 0, all = 0;
+      for (let k = 4; k <= 44; k++) { all += p[k]; if (k >= 30) hf += p[k]; }
+      if (all > 0 && hf / all > EMG_FRAC) { emg[c]++; continue; }
+      const bg = bgFit(p), e = new Float64Array(45);
+      for (let k = 1; k <= 44; k++) e[k] = Math.max(0, p[k] / bg(k) - 1);
+      es.push(e); used[c]++;
+    }
+    if (!es.length) { win.push(null); continue; }
+    const em = new Float64Array(45);
+    for (let k = 1; k <= 44; k++) em[k] = median(es.map(e => e[k]));
+    win.push(em);
+  }
+  corrected = { win, hop, M: win.length, art, emg, used, total, ok: win.some(w => w), band: null };
+  if (!corrected.ok) return;
+  const raw = BANDS.map(([, lo, hi]) => win.map(w => w ? meanBins(w, lo, hi - 1) : null));
+  raw.forEach(interpNulls);
+  corrected.band = raw.map(a => movAvg(a, 2));
+}
+function pieValuesNew() {
+  const win = corrected.win.filter(w => w);
+  if ($('pieMode2').value === 'time') {
+    const cnt = [0,0,0,0];
+    win.forEach(w => {
+      let best = 0, bv = -1;
+      PIE_BANDS.forEach(([, lo, hi], b) => { const v = meanBins(w, lo, hi); if (v > bv) { bv = v; best = b; } });
+      cnt[best]++;
+    });
+    return { vals: cnt, total: win.length, mean: null };
+  }
+  const vals = PIE_BANDS.map(([, lo, hi]) => win.reduce((s, w) => s + meanBins(w, lo, hi), 0) / win.length);
+  return { vals, total: vals.reduce((a, b) => a + b, 0), mean: vals };
+}
+function drawPie2() {
+  if (!corrected) return;
+  if (!corrected.ok) { emptyMsg('pie2', '有効な窓がありません（振幅・筋電の除外でほぼ全窓が除外）'); return; }
+  const { vals, total, mean } = pieValuesNew();
+  let extra = '';
+  if (mean && total < 0.2) extra = `<br><span style="font-size:13px;color:#f96">⚠ 背景を超える明確な山がほとんどありません（4帯域の山の高さ合計=${total.toFixed(2)}）。比率は参考程度です。</span>`;
+  else if (mean) extra = `<br><span style="font-size:13px;color:#aaa">各帯域の山の高さ（背景比, 1Hzあたり平均）: ` + PIE_BANDS.map(([nm], b) => `${nm} ${mean[b].toFixed(2)}`).join(' / ') + `</span>`;
+  drawPieCanvas('pie2', 'pieText2', vals, total, $('pieMode2').value === 'time' ? '山が最も高かった時間' : '山の高さ', extra);
+}
+$('pieMode2').onchange = () => safe('円グラフ(補正)', drawPie2);
+
+function drawBandTime2() {
+  if (!corrected) return;
+  if (!corrected.ok) { emptyMsg('bandTime2', '有効な窓がありません（振幅・筋電の除外でほぼ全窓が除外）'); return; }
+  const M = corrected.M, T = n => n, TT = data[0].length / FS, E = corrected.band;
+  let series, lo, hi, fmtY;
+  if ($('bandMode2').value === 'rel') {
+    const tot = Array.from({ length: M }, (_, i) => E.reduce((s, a) => s + a[i], 0) + 1e-6);
+    series = E.map(a => a.map((v, i) => v / tot[i] * 100));
+    lo = 0; hi = Math.max(10, ...series.flat()) * 1.05; fmtY = v => v.toFixed(0) + '%';
+  } else {
+    series = E; lo = 0; hi = Math.max(0.5, ...series.flat()) * 1.1; fmtY = v => v.toFixed(2);
+  }
+  drawTimeChart({ canvasId: 'bandTime2', series, lo, hi, fmtY, hop: corrected.hop, M, T: TT,
+    strips: [[argmaxCols(E, M, 0), '全帯域']], runsEl: 'bandRuns2' });
+}
+$('bandMode2').onchange = () => safe('帯域推移(補正)', drawBandTime2);
 
 // ---------- 解析（1回だけ）と描画（何度でも） ----------
 // 重い計算は計測完了時に1回だけ行い、リサイズ等では描画だけをやり直す
 function analyzeAndRender() {
   drawWaveSafe();
   setTimeout(() => {
-    lastSpectra = null; specData = null; bandSeries = null;
+    lastSpectra = null; specData = null; bandSeries = null; corrected = null;
     safe('スペクトル計算', () => { lastSpectra = data.map((x, i) => welch(x, limits[i])); });
     if (!lastSpectra) return;
     safe('スペクトログラム計算', () => computeSpec());
     safe('帯域パワー計算', () => computeBandSeries());
+    safe('補正版の計算', () => computeCorrected());
     drawAll();
     // データ品質は専用欄に「上書き」表示（ステータスへ追記しない）
     const used = lastSpectra.map(s => `${s.cnt}/${s.tot}`).join(', ');
     const relaxed = lastSpectra.some(s => s.relaxed) ? ' ⚠全窓が大振幅だったため除外なしで計算' : '';
     const amp = data.map(d => { const a = d.map(Math.abs).sort((x, y) => x - y); return a[Math.floor(a.length * 0.98)].toFixed(0); }).join('/');
-    $('quality').textContent = `使用窓(各ch): ${used}${relaxed} ／ 振幅98%点(µV): ${amp}`;
+    $('quality').textContent = `【従来版】使用窓(各ch): ${used}${relaxed} ／ 振幅98%点(µV): ${amp}`;
+    if (corrected) $('quality2').textContent = `【補正版】全${corrected.total}窓 ／ 使用(各ch): ${corrected.used.join(', ')} ／ 振幅除外: ${corrected.art.join(', ')} ／ 筋電除外: ${corrected.emg.join(', ')}`;
     lastW = $('results').clientWidth;
   }, 30);
 }
@@ -714,6 +858,8 @@ function drawAll() {
   if (!lastSpectra || !specData) return;
   safe('円グラフ', drawPie);
   safe('帯域パワー推移', drawBandTime);
+  safe('円グラフ(補正)', drawPie2);
+  safe('帯域推移(補正)', drawBandTime2);
   safe('優位な帯域', () => drawDominance(lastSpectra));
   safe('スペクトログラム', drawSpec);
   safe('周波数スペクトル', () => drawPSD(lastSpectra));
