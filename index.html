@@ -411,7 +411,7 @@ canvas {
       </div>
       <canvas id="bandTime" data-h="340" style="height:340px"></canvas>
       <div class="section-body">
-        <div class="section-note" style="border:none;padding:0;margin-bottom:6px">下の色帯＝その時刻に最も強かった帯域（上：全帯域 / 下：delta除外）</div>
+        <div class="section-note" style="border:none;padding:0;margin-bottom:6px">下の色帯＝その時間に最も強かった帯域</div>
         <div id="bandRuns" class="runs-text"></div>
       </div>
     </div>
@@ -453,7 +453,7 @@ canvas {
       </div>
       <canvas id="bandTime2" data-h="320" style="height:320px"></canvas>
       <div class="section-body">
-        <div class="section-note" style="border:none;padding:0;margin-bottom:6px">下の色帯＝その時刻に山が最も高かった帯域</div>
+        <div class="section-note" style="border:none;padding:0;margin-bottom:6px">下の色帯＝その時間に山が最も高かった帯域</div>
         <div id="bandRuns2" class="runs-text"></div>
       </div>
     </div>
@@ -1023,7 +1023,7 @@ function drawPieCanvas(canvasId,textId,vals,total,whatLabel,extra){
   $(textId).innerHTML=`${secs}秒間の${whatLabel}の割合: `+
     PIE_BANDS.map(([name],b)=>`<span style="color:${BAND_COLORS[b]}">${name} <b>${pct[b].toFixed(1)}%</b></span>`).join('　')+
     `<br>最も多かったのは <b style="color:${BAND_COLORS[top]}">${PIE_BANDS[top][0]}（${pct[top].toFixed(1)}%）</b>`+
-    `<br><span style="font-size:11px;color:var(--sub)">γ波(31Hz以上)と帯域間は除外。4つの合計を100%としています。</span>`+(extra||'');
+    `<br><span style="font-size:11px;color:var(--sub)">γ波(31Hz以上)と帯域間は除外。4つの合計=100%</span>`+(extra||'');
 }
 
 let lastSpectra=null;
