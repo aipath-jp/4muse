@@ -416,13 +416,14 @@ canvas {
       </div>
     </div>
 
-    <!-- ── 補正版 ── -->
-    <div class="chapter">
+        <!-- ── 補正版 ── -->
+    <div class="chapter" id="corrChapter" style="cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent" onclick="toggleCorr()">
       <div class="chapter-line"></div>
-      <span class="chapter-label">補正版 — 1/f背景を除いた「山」で比較</span>
+      <span class="chapter-label">補正版 — 1/f背景を除いた「山」で比較　<span id="corrArrow" style="color:var(--accent)">▶ OPEN</span></span>
       <div class="chapter-line"></div>
     </div>
 
+    <div id="corrBody" style="display:none">
     <div class="section-note" style="margin:8px 16px 0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px">
       ①チャンネルごとに計算・中央値で統合 ②振幅150µV超を固定除外 ③筋電窓（30〜44Hz が 4〜44Hz の10%超）を除外 ④スペクトルの1/f背景を直線推定して差し引き、背景を超えた「山の高さ」で帯域を比較。 ※δは背景推定にも使われるため補正版では小さく出るのが正常です。
     </div>
@@ -457,6 +458,8 @@ canvas {
         <div id="bandRuns2" class="runs-text"></div>
       </div>
     </div>
+
+        </div><!-- /corrBody -->
 
     <!-- ── 共通 ── -->
     <div class="chapter">
@@ -1335,6 +1338,14 @@ $('btnCsv').onclick=async()=>{
     setTimeout(()=>{ $('btnCsv').textContent='CSV コピー'; },2000);
   }
 };
+/* ── 補正版 折りたたみ ── */
+let corrOpen = false;
+function toggleCorr() {
+  corrOpen = !corrOpen;
+  $('corrBody').style.display = corrOpen ? '' : 'none';
+  $('corrArrow').textContent = corrOpen ? '▼ CLOSE' : '▶ OPEN';
+  if (corrOpen && data) safe('補正版展開描画', () => { drawPie2(); drawBandTime2(); });
+}
 </script>
 </body>
 </html>
