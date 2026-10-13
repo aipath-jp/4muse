@@ -513,7 +513,9 @@ const $ = id => document.getElementById(id);
 const dpr = () => Math.min(window.devicePixelRatio || 1, 2);
 
 /* ── 診断トグル ── */
-let diagOpen = false;
+let diagOpen = true;
+$('diag').classList.add('open');
+$('diagArrow').textContent = '▲';
 $('diagToggle').addEventListener('click', () => {
   diagOpen = !diagOpen;
   $('diag').classList.toggle('open', diagOpen);
