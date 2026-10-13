@@ -9,17 +9,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:       #08090c;
-  --surface:  #111621;
-  --surface2: #182030;
-  --border:   #1e2d42;
-  --accent:   #00c8ff;
-  --accent2:  #0080b8;
-  --text:     #dce8f5;
-  --sub:      #6a8099;
-  --ok:       #3ecf68;
-  --warn:     #f5a623;
-  --err:      #f0504a;
+  --bg:       #f5f7fa;
+  --surface:  #ffffff;
+  --surface2: #eef1f6;
+  --border:   #cdd5e0;
+  --accent:   #0077cc;
+  --accent2:  #005fa3;
+  --text:     #1a2a3a;
+  --sub:      #6a7f99;
+  --ok:       #1a9e4a;
+  --warn:     #c47800;
+  --err:      #cc2222;
   --r: 10px;
   --font:     'Inter', system-ui, sans-serif;
   --mono:     'JetBrains Mono', 'Menlo', monospace;
@@ -89,11 +89,11 @@ body {
   line-height: 1;
   min-height: 40px;
 }
-.btn-primary  { background: var(--accent); color: #000; }
+.btn-primary  { background: var(--accent); color: #fff; }
 .btn-primary:active { opacity: .8; }
 .btn-ghost    { background: transparent; color: var(--text); border-color: var(--border); }
 .btn-ghost:active { background: var(--surface2); }
-.btn-danger   { background: #2a1010; color: var(--err); border-color: #5a2020; }
+.btn-danger   { background: #fdecea; color: var(--err); border-color: #f5c0bc; }
 
 /* ── コントロールパネル ── */
 .controls {
@@ -177,7 +177,7 @@ body {
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.6;
-  color: #8db0cc;
+  color: #3a5a7a;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -270,7 +270,7 @@ body {
   min-height: 36px;
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%236a8099' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%236a7f99' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   padding-right: 28px;
@@ -543,7 +543,7 @@ function fit(c) {
 }
 function emptyMsg(id, msg) {
   const c = $(id), g = fit(c), d = dpr();
-  g.fillStyle = '#f0604a'; g.font = `${13*d}px sans-serif`; g.fillText(msg, 10, c.height / 2);
+  g.fillStyle = '#cc2222'; g.font = `${13*d}px sans-serif`; g.fillText(msg, 10, c.height / 2);
 }
 
 /* ── 音声 ── */
@@ -815,14 +815,14 @@ function robustAmp(d){const a=d.map(Math.abs).sort((x,y)=>x-y); return Math.max(
 
 function drawWave(canvas,from,len){
   const g=fit(canvas), W=canvas.width, H=canvas.height, rowH=H/4, d=dpr();
-  g.fillStyle='#0d1520'; g.fillRect(0,0,W,H);
+  g.fillStyle='#f0f3f8'; g.fillRect(0,0,W,H);
   g.font=`${11*d}px var(--mono, monospace)`;
   for(let c=0;c<4;c++){
     const seg=data[c].slice(from,from+len), amp=robustAmp(data[c]);
     const y0=rowH*(c+0.5);
-    g.strokeStyle='#1e2d42'; g.lineWidth=1; g.beginPath(); g.moveTo(0,y0); g.lineTo(W,y0); g.stroke();
+    g.strokeStyle='#cdd5e0'; g.lineWidth=1; g.beginPath(); g.moveTo(0,y0); g.lineTo(W,y0); g.stroke();
     // 帯ライン
-    g.strokeStyle='rgba(255,255,255,0.04)'; g.lineWidth=rowH-2;
+    g.strokeStyle='rgba(0,0,0,0.04)'; g.lineWidth=rowH-2;
     g.beginPath(); g.moveTo(0,rowH*c+rowH/2); g.lineTo(W,rowH*c+rowH/2); g.stroke();
     g.strokeStyle=COLORS[c]; g.lineWidth=1.5*d; g.beginPath();
     const step=Math.max(1,Math.floor(seg.length/(W/2)));
@@ -838,9 +838,9 @@ function drawWave(canvas,from,len){
     g.stroke();
     g.fillStyle=COLORS[c]; g.fillText(`${NAMES[c]}  ±${amp.toFixed(0)}µV`,6*d,rowH*c+14*d);
     // 区切り線
-    if(c<3){g.strokeStyle='#1e2d42'; g.lineWidth=1; g.beginPath(); g.moveTo(0,rowH*(c+1)); g.lineTo(W,rowH*(c+1)); g.stroke();}
+    if(c<3){g.strokeStyle='#cdd5e0'; g.lineWidth=1; g.beginPath(); g.moveTo(0,rowH*(c+1)); g.lineTo(W,rowH*(c+1)); g.stroke();}
   }
-  g.fillStyle='#6a8099'; g.font=`${10*d}px monospace`;
+  g.fillStyle='#6a7f99'; g.font=`${10*d}px monospace`;
   const t0=from/FS, t1=(from+len)/FS;
   g.fillText(t0.toFixed(1)+'s',2,H-3);
   g.fillText(t1.toFixed(1)+'s',W-44*d,H-3);
@@ -849,16 +849,16 @@ function drawWave(canvas,from,len){
 function drawPSD(spectra){
   const c=$('psd'), g=fit(c), W=c.width, H=c.height, d=dpr();
   const pad=30*d;
-  g.fillStyle='#0d1520'; g.fillRect(0,0,W,H);
+  g.fillStyle='#f0f3f8'; g.fillRect(0,0,W,H);
   let mx=-Infinity,mn=Infinity;
   spectra.forEach(({p})=>{for(let k=1;k<=44;k++){const v=Math.log10(p[k]+1e-9); mx=Math.max(mx,v); mn=Math.min(mn,v);}});
   g.font=`${10*d}px monospace`;
   const xk=k=>pad+(W-pad)*(k-1)/43;
-  const BC=['#e3334444','#a055cc44','#0099cc44','#55aa3344','#cc660044'];
+  const BC=['#e3334422','#a055cc22','#0099cc22','#55aa3322','#cc660022'];
   BANDS.forEach(([n,lo,hi],i)=>{
-    g.fillStyle=BC[i]||'#11111144';
+    g.fillStyle=BC[i]||'#11111122';
     g.fillRect(xk(lo),0,xk(hi)-xk(lo),H-pad);
-    g.fillStyle='#6a8099'; g.fillText(n,xk(lo)+3,11*d);
+    g.fillStyle='#6a7f99'; g.fillText(n,xk(lo)+3,11*d);
   });
   spectra.forEach(({p},ci)=>{
     g.strokeStyle=COLORS[ci]; g.lineWidth=1.5*d; g.beginPath();
@@ -866,10 +866,10 @@ function drawPSD(spectra){
     g.stroke();
     g.fillStyle=COLORS[ci]; g.fillText(NAMES[ci],W-60*d,14*d+ci*13*d);
   });
-  g.fillStyle='#6a8099';
+  g.fillStyle='#6a7f99';
   [1,4,8,13,20,30,44].forEach(k=>g.fillText(k+'Hz',xk(k),H-5*d));
   // 軸線
-  g.strokeStyle='#1e2d42'; g.lineWidth=1;
+  g.strokeStyle='#cdd5e0'; g.lineWidth=1;
   g.beginPath(); g.moveTo(pad,0); g.lineTo(pad,H-pad); g.lineTo(W,H-pad); g.stroke();
 }
 
@@ -890,17 +890,17 @@ function drawDominance(spectra){
     `delta除外では: <b style="color:${BC2[top2]}">${BANDS[top2][0]}（${(pct[top2]/hiTotal*100).toFixed(1)}%）</b><br>` +
     `<span style="font-size:12px;color:var(--sub)">4〜40Hzピーク周波数: `+NAMES.map((n,i)=>`${n} ${peaks[i]}Hz`).join(' / ')+`</span>`;
   const cv=$('dom'), g=fit(cv), W=cv.width, H=cv.height, d=dpr();
-  g.fillStyle='#0d1520'; g.fillRect(0,0,W,H);
+  g.fillStyle='#f0f3f8'; g.fillRect(0,0,W,H);
   const left=90*d, rowH=H/BANDS.length;
   g.font=`${12*d}px var(--font,sans-serif)`;
   BANDS.forEach(([n,lo,hi],i)=>{
     const w=(W-left-80*d)*pct[i]/Math.max(...pct);
-    g.fillStyle=i===top?BC2[i]+'cc':BC2[i]+'55';
+    g.fillStyle=i===top?BC2[i]+'cc':BC2[i]+'44';
     g.fillRect(left,rowH*i+5*d,Math.max(2,w),rowH-10*d);
-    g.fillStyle='#dce8f5'; g.fillText(n,4,rowH*i+rowH/2+4*d);
-    g.fillStyle='#6a8099'; g.font=`${10*d}px monospace`; g.fillText(`${lo}–${hi}Hz`,4,rowH*i+rowH/2+16*d);
+    g.fillStyle='#1a2a3a'; g.fillText(n,4,rowH*i+rowH/2+4*d);
+    g.fillStyle='#6a7f99'; g.font=`${10*d}px monospace`; g.fillText(`${lo}–${hi}Hz`,4,rowH*i+rowH/2+16*d);
     g.font=`${12*d}px var(--font,sans-serif)`;
-    g.fillStyle=i===top?'#dce8f5':'#6a8099'; g.fillText(pct[i].toFixed(1)+'%',left+w+6*d,rowH*i+rowH/2+5*d);
+    g.fillStyle=i===top?'#1a2a3a':'#6a7f99'; g.fillText(pct[i].toFixed(1)+'%',left+w+6*d,rowH*i+rowH/2+5*d);
   });
 }
 
@@ -931,13 +931,13 @@ function computeSpec(lim=limits){
 }
 function colorOf(t){
   t=Math.max(0,Math.min(1,t));
-  // 深海パレット: 暗い紺→シアン→白
+  // ライトモード用パレット: 白→水色→濃青
   if(t<0.5){
     const u=t*2;
-    return `rgb(${Math.round(u*0)},${Math.round(u*180)},${Math.round(100+u*155)})`;
+    return `rgb(${Math.round(255-u*80)},${Math.round(255-u*60)},${Math.round(255-u*30)})`;
   } else {
     const u=(t-0.5)*2;
-    return `rgb(${Math.round(u*255)},${Math.round(180+u*75)},${Math.round(255)})`;
+    return `rgb(${Math.round(175-u*130)},${Math.round(195-u*100)},${Math.round(225-u*60)})`;
   }
 }
 function drawSpec(){
@@ -948,7 +948,7 @@ function drawSpec(){
   const mode=$('specMode').value;
   const valid=specData.filter(x=>x);
   if(!valid.length){emptyMsg('spec','解析できる区間がありません'); return;}
-  g.fillStyle='#06090e'; g.fillRect(0,0,W,H);
+  g.fillStyle='#e8ecf2'; g.fillRect(0,0,W,H);
   let norm=(k,v)=>0;
   if(mode==='abs'){
     const all=valid.flatMap(a=>Array.from(a.slice(1))).sort((x,y)=>x-y);
@@ -970,12 +970,12 @@ function drawSpec(){
     }
   });
   g.font=`${10*d}px monospace`;
-  g.strokeStyle='rgba(255,255,255,0.18)'; g.lineWidth=1;
+  g.strokeStyle='rgba(0,0,0,0.18)'; g.lineWidth=1;
   [4,8,13,30].forEach(k=>{const y=H-padB-(k-0.5)*ch; g.beginPath(); g.moveTo(padL,y); g.lineTo(W,y); g.stroke();});
-  g.fillStyle='#8899aa';
+  g.fillStyle='#445566';
   [1,4,8,13,30,44].forEach(k=>g.fillText(k,2,H-padB-(k-0.5)*ch+4*d));
   const total=(data[0].length-N)/FS;
-  g.fillStyle='#6a8099';
+  g.fillStyle='#6a7f99';
   g.fillText('0s',padL+2,H-3*d);
   g.fillText((total+1).toFixed(0)+'s',W-34*d,H-3*d);
 }
@@ -994,7 +994,7 @@ function drawPieCanvas(canvasId,textId,vals,total,whatLabel,extra){
   if(!(total>0)){emptyMsg(canvasId,'解析できる区間がありません'); $(textId).innerHTML=extra||''; return;}
   const pct=vals.map(v=>v/total*100);
   const c=$(canvasId), g=fit(c), W=c.width, H=c.height, d=dpr();
-  g.fillStyle='#0d1520'; g.fillRect(0,0,W,H);
+  g.fillStyle='#f0f3f8'; g.fillRect(0,0,W,H);
   const legendW=190*d;
   const r=Math.max(50*d,Math.min(H*0.42,(W-legendW-30*d)/2));
   const cx=18*d+r, cy=H/2;
@@ -1004,7 +1004,7 @@ function drawPieCanvas(canvasId,textId,vals,total,whatLabel,extra){
     if(p>0){
       g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,r,a0,a1); g.closePath();
       g.fillStyle=BAND_COLORS[b]; g.fill();
-      g.strokeStyle='#0d1520'; g.lineWidth=3*d; g.stroke();
+      g.strokeStyle='#f0f3f8'; g.lineWidth=3*d; g.stroke();
       if(p>=5){
         const am=(a0+a1)/2;
         g.fillStyle='#fff'; g.font=`bold ${14*d}px var(--font,sans-serif)`; g.textAlign='center';
@@ -1018,8 +1018,8 @@ function drawPieCanvas(canvasId,textId,vals,total,whatLabel,extra){
   PIE_BANDS.forEach(([name,,, range,desc],b)=>{
     const y=y0+rowH*b;
     g.fillStyle=BAND_COLORS[b]; g.fillRect(lx,y,12*d,12*d);
-    g.fillStyle='#dce8f5'; g.font=`bold ${14*d}px var(--font,sans-serif)`; g.fillText(`${name} ${pct[b].toFixed(1)}%`,lx+18*d,y+12*d);
-    g.fillStyle='#6a8099'; g.font=`${10*d}px monospace`;
+    g.fillStyle='#1a2a3a'; g.font=`bold ${14*d}px var(--font,sans-serif)`; g.fillText(`${name} ${pct[b].toFixed(1)}%`,lx+18*d,y+12*d);
+    g.fillStyle='#6a7f99'; g.font=`${10*d}px monospace`;
     g.fillText(range,lx+18*d,y+26*d); g.fillText(desc,lx+18*d,y+39*d);
   });
   const secs=(data[0].length/FS).toFixed(0), top=pct.indexOf(Math.max(...pct));
@@ -1059,7 +1059,7 @@ function drawTimeChart(o){
   const padL=54*d, padR=36*d, padT=12*d, stripH=20*d, axisH=22*d, ns=o.strips.length;
   const chartH=H-padT-axisH-stripH*ns-16*d;
   const T=o.T, M=o.M, plotW=W-padL-padR, series=o.series, lo=o.lo, hi=o.hi;
-  g.fillStyle='#0d1520'; g.fillRect(0,0,W,H);
+  g.fillStyle='#f0f3f8'; g.fillRect(0,0,W,H);
   const xT=t=>padL+plotW*t/T;
   const xI=i=>xT((i*o.hop+N/2)/FS);
   const yOf=v=>padT+chartH*(1-(v-lo)/(hi-lo+1e-9));
@@ -1067,14 +1067,14 @@ function drawTimeChart(o){
   // グリッド
   for(let q=0;q<=4;q++){
     const v=lo+(hi-lo)*q/4, y=yOf(v);
-    g.strokeStyle='#1e2d42'; g.lineWidth=d; g.beginPath(); g.moveTo(padL,y); g.lineTo(W-padR,y); g.stroke();
-    g.fillStyle='#6a8099'; g.fillText(o.fmtY(v),2,y+3*d);
+    g.strokeStyle='#cdd5e0'; g.lineWidth=d; g.beginPath(); g.moveTo(padL,y); g.lineTo(W-padR,y); g.stroke();
+    g.fillStyle='#6a7f99'; g.fillText(o.fmtY(v),2,y+3*d);
   }
   const step=T<=40?5:(T<=120?10:30);
   for(let t=0;t<=T+0.01;t+=step){
     const x=xT(t);
-    g.strokeStyle='#1a2535'; g.lineWidth=d; g.beginPath(); g.moveTo(x,padT); g.lineTo(x,padT+chartH); g.stroke();
-    g.fillStyle='#6a8099'; g.fillText(t+'s',Math.min(x,W-padR-20*d)-4*d,H-5*d);
+    g.strokeStyle='#dde3ec'; g.lineWidth=d; g.beginPath(); g.moveTo(x,padT); g.lineTo(x,padT+chartH); g.stroke();
+    g.fillStyle='#6a7f99'; g.fillText(t+'s',Math.min(x,W-padR-20*d)-4*d,H-5*d);
   }
   g.lineJoin='round'; g.lineWidth=2.2*d;
   series.forEach((arr,b)=>{
@@ -1097,7 +1097,7 @@ function drawTimeChart(o){
       const x1=i===M-1?W-padR:xI(i)+cellW/2;
       g.fillStyle=BAND_COLORS[b]; g.fillRect(x0,y,x1-x0+1,stripH-4*d);
     });
-    g.font=`${9*d}px monospace`; g.fillStyle='#6a8099'; g.fillText(label,2,y+12*d);
+    g.font=`${9*d}px monospace`; g.fillStyle='#6a7f99'; g.fillText(label,2,y+12*d);
   });
   const fmt=runs=>runs.map(r=>`<span style="color:${BAND_COLORS[r.b]}">${Math.round(r.start)}–${Math.round(r.end)}s: <b>${BANDS[r.b][0]}</b></span>`).join('　');
   $(o.runsEl).innerHTML=o.strips.map(([arg,label])=>`${label}: ${fmt(dominantRuns(arg,T,o.hop))}`).join('<br>');
@@ -1328,7 +1328,6 @@ $('btnCsv').onclick=async()=>{
     $('btnCsv').textContent='✓ コピー完了';
     setTimeout(()=>{ $('btnCsv').textContent='CSV コピー'; },2000);
   } catch {
-    // フォールバック: 非表示のtextareaに書いてコピー
     const ta=document.createElement('textarea');
     ta.value=s; ta.style.cssText='position:fixed;top:-999px;opacity:0';
     document.body.appendChild(ta); ta.select();
