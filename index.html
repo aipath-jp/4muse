@@ -187,6 +187,41 @@ body {
 }
 .diag-body.open { display: block; }
 
+/* ── 4ch接触インジケーター ── */
+.contact-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding-top: 2px;
+}
+.contact-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.contact-light {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface2);
+  transition: background .4s, border-color .4s, box-shadow .4s;
+}
+.contact-light.good {
+  background: var(--ok);
+  border-color: #15853e;
+  box-shadow: 0 0 7px rgba(26,158,74,0.55);
+}
+.contact-name {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--sub);
+  letter-spacing: .02em;
+}
+
 /* エラー */
 #errlog {
   font-family: var(--mono);
@@ -353,6 +388,13 @@ canvas {
       <span class="diag-expand" id="diagArrow">▼</span>
     </div>
     <pre id="diag" class="diag-body">データ元: 未接続</pre>
+  </div>
+  <!-- ── 4ch接触インジケーター ── -->
+  <div class="contact-row" id="contactRow">
+    <div class="contact-cell"><div class="contact-light" id="cl0"></div><span class="contact-name">TP9</span></div>
+    <div class="contact-cell"><div class="contact-light" id="cl1"></div><span class="contact-name">AF7</span></div>
+    <div class="contact-cell"><div class="contact-light" id="cl2"></div><span class="contact-name">AF8</span></div>
+    <div class="contact-cell"><div class="contact-light" id="cl3"></div><span class="contact-name">TP10</span></div>
   </div>
 </div>
 <pre id="errlog"></pre>
@@ -645,7 +687,7 @@ function push(ch, samples, raw) {
 }
 function sourceLabel() { return source==='muse'?'実機':source==='demo'?'デモ':'未接続'; }
 function renderDiag() {
-  if(source==='none') { $('diag').textContent='データ元: 未接続'; return; }
+  if(source==='none') { $('diag').textContent='データ元: 未接続'; updateContactLights(null); return; }
   const st = a => { if(!a.length) return {last:NaN,sd:NaN}; const m=a.reduce((x,y)=>x+y,0)/a.length; return {last:a[a.length-1], sd:Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length)}; };
   let t = `データ元: ${source==='muse'?'実機 Muse ('+devName+')':'デモ（疑似信号）'}\n`;
   t += 'ch     パケット   Hz   直近µV  振幅SD  欠落\n';
@@ -663,6 +705,23 @@ function renderDiag() {
   else if(sds.some(s=>s>400)) v='△ 振幅が異常に大きいです';
   else v=source==='muse'?'✓ 実機から約256Hzで脳波らしいデータを受信中':'（デモなので実機の確認にはなりません）';
   $('diag').textContent=t+'判定: '+v;
+
+  // ── 4ch接触インジケーター更新 ──
+  const states = [];
+  for (let c = 0; c < 4; c++) {
+    const s = st(diag.recent[c]);
+    const rateOk = diag.rate[c] >= 200 && diag.rate[c] <= 310;
+    const sdOk   = !isNaN(s.sd) && s.sd >= 1.5 && s.sd <= 350;
+    states.push(rateOk && sdOk);
+  }
+  updateContactLights(states);
+}
+function updateContactLights(states) {
+  for (let c = 0; c < 4; c++) {
+    const el = document.getElementById('cl' + c);
+    if (!el) continue;
+    el.classList.toggle('good', states !== null && states[c] === true);
+  }
 }
 setInterval(()=>{
   const now=Date.now(), dt=diag.tPrev?(now-diag.tPrev)/1000:0;
@@ -787,7 +846,7 @@ for(let n=0;n<N;n++) HANN[n]=0.5-0.5*Math.cos(2*Math.PI*n/(N-1));
 
 function arrMax(a){let m=-Infinity; for(let i=0;i<a.length;i++) if(a[i]>m) m=a[i]; return m;}
 function arrMin(a){let m=Infinity; for(let i=0;i<a.length;i++) if(a[i]<m) m=a[i]; return m;}
-function absMax(a){let m=0; for(let i=0;i<a.length;i++){const v=Math.abs(a[i]); if(v>m) m=v;} return m;}
+function absMax(a){let m=0; for(let i=0;i<a.length;i++){const v=Math.abs(a[i]); if(v>m) m=a[i];} return m;}
 
 function welch(x,limit=150){
   let r=welchRun(x,limit);
